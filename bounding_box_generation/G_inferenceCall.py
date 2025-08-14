@@ -43,7 +43,6 @@ import ssl
 import requests
 
 
-
 def inference_dicom(file_path, text_prompts, model, is_CT, site=None):
     image = read_dicom(file_path, is_CT, site=site)
     pred_mask = interactive_infer_image(model, Image.fromarray(image), text_prompts)
@@ -58,9 +57,8 @@ def get_target_segment_number(seg, keyword="neoplasm"):
 
 text_prompt = ['tumor']
 
-
 def getModel() :
-    # Pour forcer le trust du certificat (déconseillé en prod)
+    # Pour forcer le trust du certificat
     ssl._create_default_https_context = ssl._create_unverified_context
 
     # Charger les options depuis le fichier de configuration
@@ -75,22 +73,18 @@ def getModel() :
     # Vérifier si CUDA est disponible et définir le périphérique
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    # # Créer le modèle avec les options et la fonction de construction (en utilisant le périphérique approprié)
+    # # Créer le modèle avec les options et la fonction de construction
     build = build_model(opt, device=device)
     model = BaseModel(opt, build)
 
-    # # Charger les poids pré-entraînés
     model = model.from_pretrained(pretrained_pth).eval()
 
-    # # Déplacer le modèle vers le périphérique approprié (CPU ou GPU)
     model.to(device)
 
-    # # Effectuer la prédiction sans calcul du gradient
     with torch.no_grad():
         model.model.sem_seg_head.predictor.lang_encoder.get_text_embeddings(BIOMED_CLASSES + ["background"], is_eval=True)
     
     return model
-
 
 def getMasks(model):
     predicted_masks = []
@@ -110,14 +104,12 @@ def getMasks(model):
         seg = pydicom.dcmread(seg_path)
         target_segment_number = get_target_segment_number(seg)
 
-        # Création du mapping UID → masque GT
+        #  mapping UID / masque GT
         masks = {}
         for i, f in enumerate(seg.PerFrameFunctionalGroupsSequence):
             if int(f.SegmentIdentificationSequence[0].ReferencedSegmentNumber) == target_segment_number:
                 uid = f.DerivationImageSequence[0].SourceImageSequence[0].ReferencedSOPInstanceUID
                 masks[uid] = seg.pixel_array[i]
-
-
 
         for dicom_file, img_dcm in zip(dicom_files, image_slices):
             sop_uid = img_dcm.SOPInstanceUID
@@ -130,7 +122,6 @@ def getMasks(model):
             if sop_uid in masks:
                 gt_mask = masks[sop_uid]
 
-                # Resize pred_mask to match the shape of gt_mask
                 if pred_mask.shape != gt_mask.shape:
                     pred_mask = resize(pred_mask, gt_mask.shape, anti_aliasing=False)
 
@@ -224,7 +215,7 @@ def showInference(patient, model):
 
 def showInferenceNP(patient, model):
 
-    images_dir = f"./test/dcm/{patient}/0/"       # Dossier contenant les fichiers DICOM image
+    images_dir = f"./test/dcm/{patient}/0/"       # Dossier contenant les fichiers DICOM
     seg_path = f"./test/dcm/{patient}/1/1-1.dcm"  # Fichier de segmentation DICOM SEG
 
     dicom_files = sorted(os.listdir(images_dir))
@@ -334,8 +325,8 @@ def showBoundingBox(patient, model, vect):
         plt.imshow(pred_mask_resized, alpha=0.4, cmap='Reds')
 
         # Tracé du rectangle rouge
-        plt.plot([x1, x1], [y1, y2], 'r')  # côté gauche
-        plt.plot([x2, x2], [y1, y2], 'r')  # côté droit
+        plt.plot([x1, x1], [y1, y2], 'r')  # gauche
+        plt.plot([x2, x2], [y1, y2], 'r')  # droit
         plt.plot([x1, x2], [y1, y1], 'r')  # haut
         plt.plot([x1, x2], [y2, y2], 'r')  # bas
 
@@ -348,10 +339,6 @@ def showBoundingBox(patient, model, vect):
         res.append([img_array, pred_mask_resized])
 
     return res
-
-
-
-
 
 def showFilteredInference(patient, model, plot=True):
 
@@ -381,7 +368,6 @@ def showFilteredInference(patient, model, plot=True):
             res = [i for i in range(n)]
         return res
 
-    # Chemins
     images_dir = f"./test/dcm/{patient}/0/"
     seg_path = f"./test/dcm/{patient}/1/1-1.dcm"
 
@@ -389,7 +375,6 @@ def showFilteredInference(patient, model, plot=True):
     image_slices = [pydicom.dcmread(os.path.join(images_dir, f)) for f in dicom_files]
     seg = pydicom.dcmread(seg_path)
 
-    # Masques SEG par UID
     target_segment_number = get_target_segment_number(seg)
     masks = []
     uids = []
@@ -399,7 +384,6 @@ def showFilteredInference(patient, model, plot=True):
             uids.append(f.DerivationImageSequence[0].SourceImageSequence[0].ReferencedSOPInstanceUID)
     uid_to_seg = {uid: mask for uid, mask in zip(uids, masks)}
 
-    # Prédictions
     pred_masks = []
     seg_masks = []
     img_arrays = []
@@ -425,7 +409,7 @@ def showFilteredInference(patient, model, plot=True):
         img_arrays.append(img_array)
         sop_uids.append(sop_uid)
 
-    # Appliquer le filtre
+    # Sortie du filtre
     selected_indices = diceFilter(pred_masks)
 
     # Afficher uniquement les images sélectionnées
@@ -444,11 +428,10 @@ def showFilteredInference(patient, model, plot=True):
             plt.tight_layout()
             plt.show()
 
-    return [  # Optionnel : retour des éléments gardés
+    return [  # retour des éléments gardés
         (pred_masks[i], seg_masks[i])
         for i in selected_indices
     ]
-
 
 
 def maskFilter(patient_masks):
@@ -486,3 +469,54 @@ def maskFilter(patient_masks):
     else:
         idx = diceFilter(patient_masks)
         return [patient_masks[i] for i in idx]
+    
+
+def maskFilterGT(patient_masks):
+    #ici patient_masks = [preds, gts]
+    def diceScore(mask1, mask2):
+        mask1 = (mask1 > 0.5).astype(np.uint8)
+        mask2 = (mask2 > 0.5).astype(np.uint8)
+        intersection = np.sum(mask1 * mask2)
+        total = np.sum(mask1) + np.sum(mask2)
+        if total != 0:
+            return (2.0 * intersection) / total
+        return 0
+
+    def diceFilter(masks):
+        n = len(masks)
+        if n > 1:
+            lst = []
+            for i in range(len(masks)):
+                moy = 0
+                for j in range(len(masks)):
+                    if i != j:
+                        moy += diceScore(masks[i], masks[j])
+                lst.append((i, moy / (len(masks) - 1)))
+            lst = sorted(lst, key=lambda x: x[1])
+            res = [a for a, _ in lst]
+            res = res[n // 2:]
+        else:
+            res = [i for i in range(n)]
+        return res
+
+    if isinstance(patient_masks[0], np.ndarray) and patient_masks[0].ndim == 3:
+        preds, gts = patient_masks
+        if not (isinstance(gts, np.ndarray) and gts.ndim == 3):
+            raise TypeError("patient_masks[1] (gts) doit être un np.ndarray 3D.")
+        if preds.shape[0] != gts.shape[0]:
+            raise ValueError("preds et gts doivent avoir le même nombre de slices (axe 0).")
+
+        preds_list = [preds[i] for i in range(preds.shape[0])]
+        idx = diceFilter(preds_list)
+
+        preds_f = [preds[i] for i in idx]
+        gts_f   = [gts[i] for i in idx]
+
+        preds_out = np.stack(preds_f, axis=0) if len(preds_f) > 0 else np.empty((0,) + preds.shape[1:], dtype=preds.dtype)
+        gts_out   = np.stack(gts_f,   axis=0) if len(gts_f)   > 0 else np.empty((0,) + gts.shape[1:],   dtype=gts.dtype)
+        return preds_out, gts_out
+    else:
+        idx = diceFilter(patient_masks[0])
+        pred, gt = [patient_masks[0][i] for i in idx], [patient_masks[1][i] for i in idx]
+        return (pred,gt)
+    
