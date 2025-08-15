@@ -16,6 +16,15 @@ This repository is organized around three Python notebooks, each in its own dedi
 
 Each folder includes a `README.md` with more detailed explanations of the notebook and the conclusions drawn. A more readable HTML version of each notebook is also available in each folder.
 
+# **Biblio**
+
+The `biblio` notebook presents a bibliography and useful links I used during my internship on:
+- [**BiomedParse**](https://github.com/microsoft/BiomedParse)
+- Explainability
+- Conformal prediction
+- A Colab on [**MedSAM**](https://github.com/bowang-lab/MedSAM)
+- Transformers
+
 
 
 
