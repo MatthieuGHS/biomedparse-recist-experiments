@@ -18,12 +18,12 @@ A more readable **HTML** version of each notebook is also available in each fold
 
 # **Biblio**
 
-Le Notebook `biblio` présente de la bibliographie et des liens qui m'ont été utile lors de mon stage sur:
+The `biblio` notebook presents the bibliography and useful links I relied on during my internship, covering:
 - [**BiomedParse**](https://github.com/microsoft/BiomedParse)
-- L'explicabilité
-- La prédiction conforme
-- Un collab sur [**MedSAM**](https://github.com/bowang-lab/MedSAM)
-- Les transformers
+- L'explainability
+- Conformal Prediction
+- A Colab on [**MedSAM**](https://github.com/bowang-lab/MedSAM)
+- Transformers
 
 
 
