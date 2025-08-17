@@ -20,7 +20,7 @@ A more readable **HTML** version of each notebook is also available in each fold
 
 The `biblio` notebook presents the bibliography and useful links I relied on during my internship, covering:
 - [**BiomedParse**](https://github.com/microsoft/BiomedParse)
-- L'explainability
+- Explainability
 - Conformal Prediction
 - A Colab on [**MedSAM**](https://github.com/bowang-lab/MedSAM)
 - Transformers
